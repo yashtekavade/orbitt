@@ -1,0 +1,1037 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <meta name="theme-color" content="#0a0e14">
+  <title>Orbit — nearby, right now</title>
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
+    :root {
+      --ink: #0a0e14;
+      --panel: #121824;
+      --line: #233047;
+      --dim: #8a97ab;
+      --text: #e8edf4;
+      --signal: #5ff0c8;
+      --warn: #ff7a6b;
+      --font-d: "Space Grotesk", system-ui, sans-serif;
+      --font-b: "Inter", system-ui, sans-serif;
+    }
+
+    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+    * {
+      box-sizing: border-box;
+      -webkit-tap-highlight-color: transparent
+    }
+
+    html,
+    body {
+      margin: 0;
+      height: 100%;
+      background: var(--ink);
+      color: var(--text);
+      font-family: var(--font-b);
+      overscroll-behavior: none
+    }
+
+    #app {
+      height: 100dvh;
+      display: flex;
+      flex-direction: column;
+      position: relative
+    }
+
+    #map {
+      flex: 1;
+      background: var(--ink);
+      z-index: 0
+    }
+
+    .leaflet-tile {
+      filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)
+    }
+
+    .leaflet-container {
+      background: var(--ink)
+    }
+
+    /* top bar */
+    .bar {
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 500;
+      padding: 14px 16px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: linear-gradient(180deg, rgba(10, 14, 20, .9), rgba(10, 14, 20, 0))
+    }
+
+    .brand {
+      font-family: var(--font-d);
+      font-weight: 700;
+      letter-spacing: -.02em;
+      font-size: 20px
+    }
+
+    .brand span {
+      color: var(--signal)
+    }
+
+    .ghost {
+      font-size: 12px;
+      font-weight: 600;
+      padding: 7px 12px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--panel);
+      color: var(--dim)
+    }
+
+    .ghost.on {
+      color: var(--ink);
+      background: var(--signal);
+      border-color: var(--signal)
+    }
+
+    /* mode switch */
+    .modes {
+      position: absolute;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 500;
+      display: flex;
+      gap: 4px;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      padding: 4px;
+      border-radius: 999px
+    }
+
+    .modes button {
+      font-family: var(--font-d);
+      font-weight: 500;
+      font-size: 13px;
+      padding: 9px 20px;
+      border-radius: 999px;
+      border: 0;
+      background: transparent;
+      color: var(--dim)
+    }
+
+    .modes button.active {
+      background: var(--signal);
+      color: var(--ink)
+    }
+
+    /* avatar markers */
+    .av {
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      border: 2px solid var(--signal);
+      background-size: cover;
+      background-position: center;
+      box-shadow: 0 0 0 6px rgba(95, 240, 200, .12)
+    }
+
+    .av.pulse {
+      animation: pulse 2s infinite
+    }
+
+    @keyframes pulse {
+      0% {
+        box-shadow: 0 0 0 4px rgba(95, 240, 200, .25)
+      }
+
+      70% {
+        box-shadow: 0 0 0 16px rgba(95, 240, 200, 0)
+      }
+
+      100% {
+        box-shadow: 0 0 0 4px rgba(95, 240, 200, 0)
+      }
+    }
+
+    .me {
+      border-color: #fff;
+      box-shadow: 0 0 0 6px rgba(255, 255, 255, .14)
+    }
+
+    .av.real {
+      border-color: #ffd76b;
+      box-shadow: 0 0 0 6px rgba(255, 215, 107, .16)
+    }
+
+    /* real live users = gold */
+    .av.area {
+      border-style: dashed;
+      border-color: #ffd76b
+    }
+
+    /* my dot when in neighborhood mode */
+    .placehint {
+      position: absolute;
+      top: 64px;
+      left: 16px;
+      right: 16px;
+      z-index: 500;
+      text-align: center;
+      background: var(--panel);
+      border: 1px solid var(--signal);
+      border-radius: 12px;
+      padding: 11px 14px;
+      font-size: 13px;
+      color: var(--text);
+      display: none
+    }
+
+    .placehint.show {
+      display: block
+    }
+
+    .hub {
+      width: 34px;
+      height: 34px;
+      border-radius: 12px;
+      display: grid;
+      place-items: center;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      font-size: 16px
+    }
+
+    .hub .cnt {
+      position: absolute;
+      top: -6px;
+      right: -6px;
+      background: var(--signal);
+      color: var(--ink);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 1px 5px;
+      border-radius: 999px
+    }
+
+    /* sheet */
+    .sheet {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      z-index: 600;
+      background: var(--panel);
+      border-top: 1px solid var(--line);
+      border-radius: 22px 22px 0 0;
+      padding: 8px 18px 22px;
+      transform: translateY(110%);
+      transition: transform .28s cubic-bezier(.2, .8, .2, 1);
+      max-height: 82dvh;
+      overflow: auto
+    }
+
+    .sheet.up {
+      transform: translateY(0)
+    }
+
+    .grip {
+      width: 38px;
+      height: 4px;
+      background: var(--line);
+      border-radius: 9px;
+      margin: 6px auto 14px
+    }
+
+    .photo {
+      width: 100%;
+      aspect-ratio: 1/1;
+      border-radius: 16px;
+      object-fit: cover;
+      background: #1c2536
+    }
+
+    .name {
+      font-family: var(--font-d);
+      font-weight: 700;
+      font-size: 22px;
+      margin: 14px 0 2px
+    }
+
+    .meta {
+      color: var(--dim);
+      font-size: 13px
+    }
+
+    .prompt {
+      margin-top: 12px;
+      padding: 12px 14px;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      border-radius: 12px
+    }
+
+    .prompt .q {
+      color: var(--dim);
+      font-size: 12px
+    }
+
+    .prompt .a {
+      font-family: var(--font-d);
+      font-weight: 500;
+      font-size: 15px;
+      margin-top: 3px
+    }
+
+    .cta {
+      width: 100%;
+      margin-top: 16px;
+      padding: 15px;
+      border: 0;
+      border-radius: 14px;
+      font-family: var(--font-d);
+      font-weight: 700;
+      font-size: 16px;
+      background: var(--signal);
+      color: var(--ink)
+    }
+
+    .cta:disabled {
+      background: var(--line);
+      color: var(--dim)
+    }
+
+    .cta.leave {
+      background: transparent;
+      border: 1px solid var(--warn);
+      color: var(--warn)
+    }
+
+    /* fuse timer */
+    .fuse {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 14px;
+      padding: 12px 14px;
+      background: rgba(255, 122, 107, .1);
+      border: 1px solid rgba(255, 122, 107, .3);
+      border-radius: 12px
+    }
+
+    .fuse .t {
+      font-family: var(--font-d);
+      font-weight: 700;
+      font-size: 20px;
+      color: var(--warn)
+    }
+
+    .fuse .lbl {
+      font-size: 12px;
+      color: var(--dim)
+    }
+
+    /* chat */
+    .chat {
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      margin-top: 12px;
+      max-height: 38dvh;
+      overflow: auto;
+      padding-right: 2px
+    }
+
+    .msg {
+      max-width: 78%;
+      padding: 9px 13px;
+      border-radius: 14px;
+      font-size: 14px;
+      line-height: 1.35
+    }
+
+    .msg.them {
+      background: var(--ink);
+      border: 1px solid var(--line);
+      align-self: flex-start;
+      border-bottom-left-radius: 4px
+    }
+
+    .msg.me {
+      background: var(--signal);
+      color: var(--ink);
+      align-self: flex-end;
+      border-bottom-right-radius: 4px
+    }
+
+    .row {
+      display: flex;
+      gap: 8px;
+      margin-top: 12px
+    }
+
+    .row input {
+      flex: 1;
+      padding: 13px 15px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: var(--ink);
+      color: var(--text);
+      font-size: 15px;
+      outline: none
+    }
+
+    .row button {
+      padding: 0 18px;
+      border: 0;
+      border-radius: 12px;
+      background: var(--signal);
+      color: var(--ink);
+      font-weight: 700
+    }
+
+    .hubhead {
+      font-family: var(--font-d);
+      font-weight: 700;
+      font-size: 20px
+    }
+
+    .here {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 12px
+    }
+
+    .here .p {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      background: var(--ink);
+      border: 1px solid var(--line);
+      padding: 6px 11px 6px 6px;
+      border-radius: 999px;
+      font-size: 13px
+    }
+
+    .here .p .d {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      background-size: cover
+    }
+
+    /* toast */
+    .toast {
+      position: absolute;
+      top: 64px;
+      left: 16px;
+      right: 16px;
+      z-index: 700;
+      background: var(--panel);
+      border: 1px solid var(--signal);
+      border-radius: 14px;
+      padding: 13px 15px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      transform: translateY(-140%);
+      transition: transform .3s cubic-bezier(.2, .8, .2, 1)
+    }
+
+    .toast.show {
+      transform: translateY(0)
+    }
+
+    .toast .d {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      background-size: cover;
+      flex-shrink: 0
+    }
+
+    .toast .txt {
+      flex: 1;
+      font-size: 14px
+    }
+
+    .toast .txt b {
+      font-family: var(--font-d)
+    }
+
+    .toast button {
+      padding: 8px 12px;
+      border: 0;
+      border-radius: 10px;
+      font-weight: 700;
+      font-size: 13px
+    }
+
+    .toast .yes {
+      background: var(--signal);
+      color: var(--ink)
+    }
+
+    .toast .no {
+      background: var(--line);
+      color: var(--dim);
+      margin-left: 6px
+    }
+  </style>
+</head>
+
+<body>
+  <div id="app">
+    <div class="bar">
+      <div class="brand">or<span>·</span>bit</div>
+      <div style="display:flex;gap:8px">
+        <button class="ghost" id="areaBtn">◎ set area</button>
+        <button class="ghost" id="ghostBtn">◐ ghost mode</button>
+      </div>
+    </div>
+    <div id="map"></div>
+    <div class="placehint" id="placehint">Tap anywhere to set your area · tap “set area” again to cancel</div>
+    <div class="modes">
+      <button id="mRadar" class="active">Radar</button>
+      <button id="mHub">Hubs</button>
+    </div>
+    <div class="sheet" id="sheet">
+      <div class="grip"></div>
+      <div id="sheetBody"></div>
+    </div>
+  </div>
+
+  <script type="module">
+    /* ============================================================
+       ORBIT — base MVP.
+       Auth (anonymous) + live location sync + 5-min fuse + chat +
+       Feature A (chosen-area / neighborhood mode). All real via Firestore.
+       ============================================================ */
+
+    /* ---- Firebase ---- */
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
+    import { getAuth, signInAnonymously, onAuthStateChanged }
+      from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection, query, where, orderBy, onSnapshot, serverTimestamp }
+      from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCTM8FsMdKD0-NHfQ7jm6C2ui7B_tMzFO0",
+      authDomain: "orbit-mvp-7e75b.firebaseapp.com",
+      projectId: "orbit-mvp-7e75b",
+      storageBucket: "orbit-mvp-7e75b.firebasestorage.app",
+      messagingSenderId: "964170192042",
+      appId: "1:964170192042:web:2b66d76eb480a25d4cecd3"
+    };
+
+    const fbApp = initializeApp(firebaseConfig);
+    const auth = getAuth(fbApp);
+    const db = getFirestore(fbApp);   // ready for step 2
+    let uid = null;                       // set once we're signed in
+
+    const el = s => document.querySelector(s);
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    /* ---- geo helpers: geohash + fuzzing (safety core) ---- */
+    // Only geohash + rounded coords should ever leave the device.
+    const B32 = "0123456789bcdefghjkmnpqrstuvwxyz";
+    function geohash(lat, lng, p = 7) {
+      let idx = 0, bit = 0, even = true, hash = "", latR = [-90, 90], lngR = [-180, 180];
+      while (hash.length < p) {
+        if (even) { const m = (lngR[0] + lngR[1]) / 2; if (lng >= m) { idx = idx * 2 + 1; lngR[0] = m } else { idx *= 2; lngR[1] = m } }
+        else { const m = (latR[0] + latR[1]) / 2; if (lat >= m) { idx = idx * 2 + 1; latR[0] = m } else { idx *= 2; latR[1] = m } }
+        even = !even; if (++bit === 5) { hash += B32[idx]; bit = 0; idx = 0 }
+      }
+      return hash;
+    }
+    // round to ~20m grid — this is what we'd actually persist
+    const fuzz = v => Math.round(v / 0.0002) * 0.0002;
+
+    /* ---- state ---- */
+    let me = { lat: 19.0760, lng: 72.8777 }; // Mumbai default; overwritten by real GPS
+    let ghost = false, mode = "radar", map, myMarker;
+    const peerMarkers = {}, hubMarkers = {};
+
+    /* ---- Feature A: chosen area ("neighborhood mode") ---- */
+    // When set, we publish this chosen point at neighborhood resolution instead of GPS.
+    // Honest: still a real present user, just shown coarser. Real GPS is NOT used while set.
+    let area = null;             // {lat,lng} chosen by the user, or null (use GPS)
+    let placingArea = false;     // true while waiting for the user to tap the map
+    const AREA_FUZZ = 0.005;     // ~500m grid — neighborhood resolution
+    let areaRing = null;         // the visible radius circle around my area dot
+
+    /* ---- step 2: real users from Firestore ---- */
+    const realMarkers = {};        // uid -> Leaflet marker
+    const realUsers = {};          // uid -> {lat,lng,updatedAt}
+    let lastWrite = 0;             // throttle: ms timestamp of last location write
+    const WRITE_EVERY = 10000;    // write my location at most every 10s (quota safety)
+    const STALE_MS = 120000;      // hide anyone not updated in the last 2 min
+
+    const peers = [
+      {
+        id: "p1", name: "Alex", age: 24, d: "0.1 km", ph: "https://i.pravatar.cc/300?img=12",
+        q: "I'm down to grab a...", a: "Matcha, right now"
+      },
+      {
+        id: "p2", name: "Sam", age: 27, d: "0.2 km", ph: "https://i.pravatar.cc/300?img=32",
+        q: "Most spontaneous thing...", a: "Booked a flight at 2am"
+      },
+      {
+        id: "p3", name: "Riya", age: 23, d: "0.3 km", ph: "https://i.pravatar.cc/300?img=45",
+        q: "Weekend plans?", a: "Finding whoever reads this"
+      },
+    ];
+    const hubs = [
+      { id: "h1", name: "Blue Tokai Cafe", emoji: "☕", here: 2, off: [0.0018, -0.0012] },
+      { id: "h2", name: "The Bar Stock", emoji: "🍸", here: 5, off: [-0.0022, 0.0020] },
+      { id: "h3", name: "Kitab Khana", emoji: "📚", here: 1, off: [0.0008, 0.0028] },
+    ];
+
+    /* ---- map ---- */
+    function initMap() {
+      map = L.map("map", { zoomControl: false, attributionControl: false }).setView([me.lat, me.lng], 16);
+      L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom: 19 }).addTo(map);
+      drawMe(); renderMode();
+      map.on("click", e => {
+        if (!placingArea) return;
+        area = { lat: e.latlng.lat, lng: e.latlng.lng };
+        placingArea = false;
+        el("#placehint").classList.remove("show");
+        const b = el("#areaBtn"); b.classList.add("on"); b.textContent = "◉ area set";
+        lastWrite = 0;            // force an immediate re-publish of the new area
+        drawMe(); writeMyLocation();
+      });
+    }
+    function icon(cls, html) { return L.divIcon({ className: "", html: `<div class="${cls}">${html}</div>`, iconSize: [38, 38], iconAnchor: [19, 19] }) }
+    function drawMe() {
+      if (myMarker) { map.removeLayer(myMarker); myMarker = null; }
+      if (areaRing) { map.removeLayer(areaRing); areaRing = null; }
+      if (ghost) return;
+      if (area) {
+        // neighborhood mode: dot at chosen area + a soft radius ring so it reads as "approximate"
+        areaRing = L.circle([area.lat, area.lng], {
+          radius: 500, color: "#ffd76b",
+          weight: 1, fillColor: "#ffd76b", fillOpacity: .08
+        }).addTo(map);
+        myMarker = L.marker([area.lat, area.lng], { icon: icon("av me area", "") }).addTo(map);
+      } else {
+        myMarker = L.marker([fuzz(me.lat), fuzz(me.lng)], { icon: icon("av me", "") }).addTo(map);
+      }
+    }
+    function renderMode() {
+      Object.values(peerMarkers).forEach(m => map.removeLayer(m));
+      Object.values(hubMarkers).forEach(m => map.removeLayer(m));
+      if (mode === "radar") {
+        peers.forEach(p => {
+          const lat = fuzz(me.lat + rand(-0.003, 0.003)), lng = fuzz(me.lng + rand(-0.003, 0.003));
+          p._ll = [lat, lng];
+          const m = L.marker([lat, lng], {
+            icon: icon("av pulse", ""),
+          }).addTo(map);
+          m.getElement().querySelector(".av").style.backgroundImage = `url(${p.ph})`;
+          m.on("click", () => openProfile(p));
+          peerMarkers[p.id] = m;
+        });
+      } else {
+        hubs.forEach(h => {
+          const m = L.marker([me.lat + h.off[0], me.lng + h.off[1]],
+            { icon: icon("hub", `${h.emoji}<span class="cnt">${h.here}</span>`) }).addTo(map);
+          m.on("click", () => openHub(h));
+          hubMarkers[h.id] = m;
+        });
+      }
+    }
+
+    /* ---- sheet ---- */
+    const sheet = el("#sheet"), body = el("#sheetBody");
+    function showSheet(html) { body.innerHTML = html; sheet.classList.add("up") }
+    function hideSheet() { sheet.classList.remove("up"); if (typeof closeChat === "function") closeChat(); }
+    sheet.addEventListener("click", e => { if (e.target === sheet) hideSheet() });
+
+    /* ---- 1v1 profile + REAL fuse (step 3) ---- */
+    function openProfile(p) {
+      showSheet(`
+    <img class="photo" src="${p.ph}">
+    <div class="name">${p.name}${p.age ? ", " + p.age : ""}</div>
+    <div class="meta">◦ ${p.d} away</div>
+    <div class="prompt"><div class="q">${p.q}</div><div class="a">${p.a}</div></div>
+    <button class="cta" id="approach">Send approach request</button>
+  `);
+      // Only real users (they carry a uid that isn't a seed id) get a real request.
+      const isReal = p.id && !/^p\d$/.test(p.id);
+      el("#approach").onclick = () => isReal ? sendRequest(p) : startFuseSim(p);
+    }
+
+    /* SENDER side: create a request doc, then watch it for accept/expire */
+    async function sendRequest(p) {
+      if (!uid) { return; }
+      const expiresAt = Date.now() + 300000;      // 5 min, stored as plain ms (simple + refresh-proof)
+      let ref;
+      try {
+        ref = await addDoc(collection(db, "requests"), {
+          senderId: uid,
+          receiverId: p.id,
+          status: "pending",
+          createdAt: Date.now(),
+          expiresAt
+        });
+      } catch (e) { console.error("request create failed:", e); return; }
+
+      showSheet(`
+    <img class="photo" src="${p.ph}" style="aspect-ratio:2/1">
+    <div class="name">Request sent</div>
+    <div class="meta">They have 5 minutes. If ignored, it quietly expires — no rejection shown.</div>
+    <div class="fuse"><div class="t" id="ft">5:00</div>
+      <div class="lbl">left to respond</div></div>
+    <button class="cta" disabled id="waitbtn">Waiting…</button>
+  `);
+
+      // cosmetic countdown driven by expiresAt (the doc is the real truth)
+      const tick = setInterval(() => {
+        const d = expiresAt - Date.now();
+        if (d <= 0) { clearInterval(tick); const t = el("#ft"); if (t) t.textContent = "0:00"; }
+        else { const s = Math.floor(d / 1000); const t = el("#ft"); if (t) t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
+      }, 1000);
+
+      // watch MY request doc for the receiver's decision
+      const stop = onSnapshot(ref, snap => {
+        const r = snap.data(); if (!r) return;
+        if (r.status === "accepted") {
+          clearInterval(tick); stop();
+          openChat(ref.id, p);
+        } else if (Date.now() > r.expiresAt && r.status === "pending") {
+          clearInterval(tick); stop();
+          const b = el("#waitbtn"); if (b) b.textContent = "Expired — no worries";
+        }
+      });
+    }
+
+    /* real chat: messages live in requests/{id}/messages, both sides listen live */
+    let chatUnsub = null;
+    function openChat(reqId, p) {
+      if (chatUnsub) { chatUnsub(); chatUnsub = null; }   // drop any previous chat listener
+      showSheet(`
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="d" style="width:38px;height:38px;border-radius:50%;background:url(${p.ph}) center/cover;border:2px solid var(--signal)"></div>
+      <div><div class="name" style="font-size:17px;margin:0">${p.name || "Connected"}</div>
+      <div class="meta">connected · say hi</div></div>
+    </div>
+    <div class="chat" id="chat"></div>
+    <div class="row"><input id="cin" placeholder="Say something…" autocomplete="off">
+      <button id="csend">Send</button></div>
+  `);
+      const chatBox = el("#chat"), input = el("#cin");
+
+      // live listener: render messages in order, mine right / theirs left
+      const msgsRef = collection(db, "requests", reqId, "messages");
+      chatUnsub = onSnapshot(query(msgsRef, orderBy("createdAt", "asc")), snap => {
+        chatBox.innerHTML = "";
+        snap.forEach(d => {
+          const m = d.data();
+          const who = m.senderId === uid ? "me" : "them";
+          const div = document.createElement("div");
+          div.className = `msg ${who}`; div.textContent = m.text;
+          chatBox.appendChild(div);
+        });
+        chatBox.scrollTop = chatBox.scrollHeight;
+      }, err => console.error("chat listen failed:", err));
+
+      const send = async () => {
+        const text = input.value.trim(); if (!text) return;
+        input.value = "";
+        try {
+          await addDoc(msgsRef, { senderId: uid, text, createdAt: Date.now() });
+        } catch (e) { console.error("send failed:", e); input.value = text; }
+      };
+      el("#csend").onclick = send;
+      input.onkeydown = e => { if (e.key === "Enter") send(); };
+      input.focus();
+    }
+
+    /* stop the chat listener when the sheet is closed */
+    function closeChat() { if (chatUnsub) { chatUnsub(); chatUnsub = null; } }
+
+    /* seed-user simulation kept only for the fake green demo dots */
+    function startFuseSim(p) {
+      const expires = Date.now() + 300000;
+      showSheet(`
+    <img class="photo" src="${p.ph}" style="aspect-ratio:2/1">
+    <div class="name">Request sent to ${p.name}</div>
+    <div class="meta">(demo user — auto-accepts so you can preview the flow)</div>
+    <div class="fuse"><div class="t" id="ft">5:00</div><div class="lbl">left to respond</div></div>
+    <button class="cta" disabled>Waiting…</button>
+  `);
+      const tick = setInterval(() => {
+        const d = expires - Date.now();
+        if (d <= 0) { clearInterval(tick); el("#ft").textContent = "0:00"; return }
+        const s = Math.floor(d / 1000); el("#ft").textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`;
+      }, 1000);
+      setTimeout(() => { clearInterval(tick); openFakeChat(p); }, 2500);
+    }
+
+    /* local-only chat for the green demo dots (no backend) */
+    function openFakeChat(p) {
+      if (chatUnsub) { chatUnsub(); chatUnsub = null; }
+      showSheet(`
+    <div style="display:flex;align-items:center;gap:10px">
+      <div class="d" style="width:38px;height:38px;border-radius:50%;background:url(${p.ph}) center/cover;border:2px solid var(--signal)"></div>
+      <div><div class="name" style="font-size:17px;margin:0">${p.name}</div>
+      <div class="meta">demo chat (not synced)</div></div>
+    </div>
+    <div class="chat" id="chat"><div class="msg them">hey! you actually sent it 😄</div></div>
+    <div class="row"><input id="cin" placeholder="Say something…"><button id="csend">Send</button></div>
+  `);
+      const chatBox = el("#chat"), input = el("#cin");
+      const add = (t, who) => { const m = document.createElement("div"); m.className = `msg ${who}`; m.textContent = t; chatBox.appendChild(m); chatBox.scrollTop = chatBox.scrollHeight; };
+      const send = () => {
+        const t = input.value.trim(); if (!t) return; add(t, "me"); input.value = "";
+        setTimeout(() => add("nice — cafe on the corner in 10?", "them"), 900);
+      };
+      el("#csend").onclick = send; input.onkeydown = e => { if (e.key === "Enter") send(); };
+    }
+
+    /* ---- Hub group chat ---- */
+    function openHub(h) {
+      showSheet(`
+    <div class="hubhead">${h.emoji} ${h.name}</div>
+    <div class="meta">${h.here} people here now</div>
+    <div class="here">
+      ${[...Array(h.here)].map((_, i) => `<div class="p"><div class="d" style="background:url(https://i.pravatar.cc/60?img=${i + 5}) center/cover"></div>guest ${i + 1}</div>`).join("")}
+    </div>
+    <button class="cta" id="join">I'm here now — join chat</button>
+    <div id="hubchat"></div>
+  `);
+      el("#join").onclick = () => {
+        el("#hubchat").innerHTML = `
+      <div class="chat" id="chat">
+        <div class="msg them">anyone got a table for 3?</div>
+        <div class="msg them">we're 5 near the window — merge?</div>
+      </div>
+      <div class="row"><input id="cin" placeholder="Message ${h.name}…"><button id="csend">Send</button></div>`;
+        const chat = el("#chat"), input = el("#cin");
+        const add = (t, who) => { const m = document.createElement("div"); m.className = `msg ${who}`; m.textContent = t; chat.appendChild(m); chat.scrollTop = chat.scrollHeight };
+        el("#csend").onclick = () => { if (!input.value.trim()) return; add(input.value, "me"); input.value = "" };
+        input.onkeydown = e => { if (e.key === "Enter") el("#csend").click() };
+        el("#join").className = "cta leave"; el("#join").textContent = "Leave " + h.name;
+        el("#join").onclick = () => openHub(h);
+      };
+    }
+
+    /* ---- RECEIVER side: listen for incoming requests (step 3) ---- */
+    let activeIncoming = null;   // request id currently shown in the toast
+    let incomingTick = null;     // countdown interval for the current toast
+    /* Fully remove the toast from the page (element + timer). It only exists while a real request is up. */
+    function clearIncoming() {
+      if (incomingTick) { clearInterval(incomingTick); incomingTick = null; }
+      activeIncoming = null;
+      const t = el("#toast"); if (t) t.remove();
+    }
+    function listenForRequests() {
+      const q = query(collection(db, "requests"),
+        where("receiverId", "==", uid), where("status", "==", "pending"));
+      onSnapshot(q, snap => {
+        // first still-valid pending request aimed at me (ignore ones already expired)
+        let picked = null;
+        snap.forEach(d => {
+          const r = d.data();
+          if (!picked && r.expiresAt && Date.now() < r.expiresAt) picked = { id: d.id, ...r };
+        });
+        if (!picked) {
+          clearIncoming();                     // nothing valid -> remove the toast entirely
+        } else if (picked.id !== activeIncoming) {
+          showIncoming(picked);                // a new valid request -> build & show it
+        }
+        // if picked.id === activeIncoming, it's already showing; leave it
+      }, err => console.error("request listen failed:", err));
+    }
+
+    function showIncoming(r) {
+      clearIncoming();                         // remove any existing toast first
+      activeIncoming = r.id;
+      const p = { name: "Someone nearby", ph: "https://i.pravatar.cc/300?u=" + r.senderId };
+
+      // build the toast element fresh, only now that a real request exists
+      const t = document.createElement("div");
+      t.className = "toast"; t.id = "toast";
+      t.innerHTML = `
+    <div class="d" style="background-image:url(${p.ph})"></div>
+    <div class="txt"><b>${p.name}</b> wants to say hi. <span id="toastFuse" style="color:var(--warn)"></span></div>
+    <div style="display:flex"><button class="yes" id="toastYes">Open</button><button class="no" id="toastNo">Skip</button></div>`;
+      el("#app").appendChild(t);
+      requestAnimationFrame(() => t.classList.add("show"));  // trigger slide-in
+
+      incomingTick = setInterval(() => {
+        const d = r.expiresAt - Date.now();
+        if (d <= 0) { clearIncoming(); return; }
+        const s = Math.floor(d / 1000);
+        const f = el("#toastFuse"); if (f) f.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} left`;
+      }, 1000);
+
+      el("#toastYes").onclick = async () => {
+        clearIncoming();
+        // guard: don't accept if it already expired between render and tap
+        try {
+          const fresh = await getDoc(doc(db, "requests", r.id));
+          const cur = fresh.data();
+          if (!cur || cur.status !== "pending" || Date.now() > cur.expiresAt) return; // too late
+          await updateDoc(doc(db, "requests", r.id), { status: "accepted" });
+          openChat(r.id, { name: "Connected", ph: p.ph });
+        } catch (e) { console.error("accept failed:", e); }
+      };
+      el("#toastNo").onclick = async () => {
+        clearIncoming();
+        // "skip" = silent ignore for the sender (they only ever see it expire),
+        // but we mark it dismissed so it stops re-popping the toast on the receiver.
+        try { await updateDoc(doc(db, "requests", r.id), { status: "dismissed" }); }
+        catch (e) { console.error("dismiss failed:", e); }
+      };
+    }
+
+    /* ---- controls ---- */
+    el("#areaBtn").onclick = () => {
+      const b = el("#areaBtn"), hint = el("#placehint");
+      if (area) {                         // area is set -> clear it, back to live GPS
+        area = null; placingArea = false;
+        b.classList.remove("on"); b.textContent = "◎ set area";
+        hint.classList.remove("show");
+        lastWrite = 0; drawMe(); writeMyLocation();
+        return;
+      }
+      placingArea = !placingArea;         // toggle placing mode
+      hint.classList.toggle("show", placingArea);
+      b.textContent = placingArea ? "◎ tap the map…" : "◎ set area";
+    };
+    el("#ghostBtn").onclick = () => {
+      ghost = !ghost; const b = el("#ghostBtn");
+      b.classList.toggle("on", ghost); b.textContent = ghost ? "● ghost on" : "◐ ghost mode"; drawMe()
+    };
+    el("#mRadar").onclick = () => { mode = "radar"; el("#mRadar").classList.add("active"); el("#mHub").classList.remove("active"); renderMode(); renderRealDots() };
+    el("#mHub").onclick = () => { mode = "hub"; el("#mHub").classList.add("active"); el("#mRadar").classList.remove("active"); renderMode(); renderRealDots() };
+
+    /* ---- real GPS: write my location to Firestore (throttled) ---- */
+    function trackLocation() {
+      if (!navigator.geolocation) { console.warn("No geolocation"); return; }
+      navigator.geolocation.watchPosition(pos => {
+        me.lat = pos.coords.latitude; me.lng = pos.coords.longitude;
+        if (!area && !placingArea) { map.setView([fuzz(me.lat), fuzz(me.lng)]); drawMe(); }
+        writeMyLocation();          // throttled inside
+      }, err => console.warn("GPS:", err.message),
+        { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
+    }
+
+    async function writeMyLocation() {
+      if (!uid || ghost) return;               // no identity, or hidden -> don't write
+      const now = Date.now();
+      if (now - lastWrite < WRITE_EVERY) return; // throttle to protect free-tier quota
+      lastWrite = now;
+
+      // Feature A: if the user picked an area, publish THAT at neighborhood resolution.
+      // Otherwise publish real GPS at the normal ~20m grid. Either way, exact coords never leave.
+      let lat, lng;
+      if (area) {
+        lat = Math.round(area.lat / AREA_FUZZ) * AREA_FUZZ;
+        lng = Math.round(area.lng / AREA_FUZZ) * AREA_FUZZ;
+      } else {
+        lat = fuzz(me.lat); lng = fuzz(me.lng);
+      }
+      const payload = {
+        geohash: geohash(lat, lng),
+        lat, lng,
+        coarse: !!area,                        // flag so we could show area dots differently later
+        updatedAt: serverTimestamp()           // server clock = reliable staleness
+      };
+      try { await setDoc(doc(db, "locations", uid), payload); }
+      catch (e) { console.error("location write failed:", e); }
+    }
+
+    /* ---- listen for everyone's location, render real dots ---- */
+    function listenNearby() {
+      onSnapshot(collection(db, "locations"), snap => {
+        const seen = new Set();
+        snap.forEach(d => {
+          if (d.id === uid) return;              // that's me, skip
+          const u = d.data();
+          const ts = u.updatedAt?.toMillis?.() ?? 0;
+          if (Date.now() - ts > STALE_MS) return;// stale -> treat as gone
+          realUsers[d.id] = { lat: u.lat, lng: u.lng };
+          seen.add(d.id);
+        });
+        // drop anyone who vanished from the snapshot or went stale
+        Object.keys(realUsers).forEach(id => { if (!seen.has(id)) delete realUsers[id]; });
+        renderRealDots();
+      }, err => console.error("nearby listen failed:", err));
+    }
+
+    function renderRealDots() {
+      // remove markers for users no longer present
+      Object.keys(realMarkers).forEach(id => {
+        if (!realUsers[id]) { map.removeLayer(realMarkers[id]); delete realMarkers[id]; }
+      });
+      if (mode !== "radar") return;              // only show people in Radar mode
+      Object.entries(realUsers).forEach(([id, u]) => {
+        if (realMarkers[id]) {
+          realMarkers[id].setLatLng([u.lat, u.lng]);   // move existing dot
+        } else {
+          const m = L.marker([u.lat, u.lng], { icon: icon("av pulse real", "") }).addTo(map);
+          const av = m.getElement().querySelector(".av");
+          av.style.backgroundImage = "url(https://i.pravatar.cc/300?u=" + id + ")"; // stable avatar per uid
+          m.on("click", () => openProfile({
+            id, name: "Nearby user", age: "", d: "close by",
+            ph: "https://i.pravatar.cc/300?u=" + id,
+            q: "They're really here", a: "a live person on your map"
+          }));
+          realMarkers[id] = m;
+        }
+      });
+    }
+
+    /* ---- auth status pill (temporary, so you can SEE step 1 working) ---- */
+    function setStatus(txt, ok) {
+      let p = el("#authpill");
+      if (!p) {
+        p = document.createElement("div"); p.id = "authpill";
+        p.style.cssText = "position:absolute;bottom:74px;left:50%;transform:translateX(-50%);z-index:600;" +
+          "font-size:11px;font-family:var(--font-d);padding:6px 12px;border-radius:999px;" +
+          "border:1px solid var(--line);background:var(--panel);white-space:nowrap";
+        el("#app").appendChild(p);
+      }
+      p.textContent = txt;
+      p.style.color = ok ? "var(--signal)" : "var(--dim)";
+      p.style.borderColor = ok ? "var(--signal)" : "var(--line)";
+    }
+
+    /* ---- boot: sign in anonymously, THEN start the app ---- */
+    let booted = false;
+    function startApp() {
+      if (booted) return; booted = true;
+      initMap();
+      trackLocation();       // step 2: write my location
+      listenNearby();        // step 2: render everyone else's, live
+      listenForRequests();   // step 3: watch for incoming approach requests
+    }
+
+    setStatus("connecting…", false);
+    onAuthStateChanged(auth, user => {
+      if (user) {
+        uid = user.uid;
+        console.log("Signed in. uid =", uid);
+        setStatus("● you're on · " + uid.slice(0, 6), true);
+        startApp();
+      }
+    });
+    signInAnonymously(auth).catch(err => {
+      console.error("Auth failed:", err);
+      setStatus("auth failed — check console", false);
+    });
+  </script>
+</body>
+
+</html>
