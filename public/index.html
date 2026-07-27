@@ -1,12 +1,18 @@
 <!DOCTYPE html>
 <html lang="en">
 
+
+
+
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="theme-color" content="#0a0e14">
   <title>Orbit — nearby, right now</title>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <link rel="stylesheet"
+    href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap" />
+  <link rel="manifest" href="/manifest.json">
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <style>
@@ -22,12 +28,21 @@
       --font-b: "Inter", system-ui, sans-serif;
     }
 
-    @import url('https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;700&family=Inter:wght@400;500;600&display=swap');
+
+
+
+    /* fonts loaded via <link> in <head> */
+
+
+
 
     * {
       box-sizing: border-box;
       -webkit-tap-highlight-color: transparent
     }
+
+
+
 
     html,
     body {
@@ -39,6 +54,9 @@
       overscroll-behavior: none
     }
 
+
+
+
     #app {
       height: 100dvh;
       display: flex;
@@ -46,19 +64,31 @@
       position: relative
     }
 
+
+
+
     #map {
       flex: 1;
       background: var(--ink);
       z-index: 0
     }
 
+
+
+
     .leaflet-tile {
       filter: invert(1) hue-rotate(180deg) brightness(.85) contrast(.9) saturate(.6)
     }
 
+
+
+
     .leaflet-container {
       background: var(--ink)
     }
+
+
+
 
     /* top bar */
     .bar {
@@ -71,8 +101,13 @@
       display: flex;
       align-items: center;
       justify-content: space-between;
-      background: linear-gradient(180deg, rgba(10, 14, 20, .9), rgba(10, 14, 20, 0))
+      background: linear-gradient(180deg, rgba(10, 14, 20, .92) 0%, rgba(10, 14, 20, .5) 80%, transparent 100%);
+      backdrop-filter: blur(12px);
+      -webkit-backdrop-filter: blur(12px)
     }
+
+
+
 
     .brand {
       font-family: var(--font-d);
@@ -81,9 +116,15 @@
       font-size: 20px
     }
 
+
+
+
     .brand span {
       color: var(--signal)
     }
+
+
+
 
     .ghost {
       font-size: 12px;
@@ -91,15 +132,34 @@
       padding: 7px 12px;
       border-radius: 999px;
       border: 1px solid var(--line);
-      background: var(--panel);
-      color: var(--dim)
+      background: rgba(18, 24, 36, .65);
+      backdrop-filter: blur(8px);
+      -webkit-backdrop-filter: blur(8px);
+      color: var(--dim);
+      transition: all .15s ease;
+      cursor: pointer
     }
+
+
+
+
+    .ghost:active {
+      transform: scale(.91);
+      opacity: .8
+    }
+
+
+
 
     .ghost.on {
       color: var(--ink);
       background: var(--signal);
-      border-color: var(--signal)
+      border-color: var(--signal);
+      box-shadow: 0 0 14px rgba(95, 240, 200, .3)
     }
+
+
+
 
     /* mode switch */
     .modes {
@@ -110,11 +170,17 @@
       z-index: 500;
       display: flex;
       gap: 4px;
-      background: var(--panel);
-      border: 1px solid var(--line);
+      background: rgba(18, 24, 36, .7);
+      backdrop-filter: blur(16px);
+      -webkit-backdrop-filter: blur(16px);
+      border: 1px solid rgba(35, 48, 71, .5);
       padding: 4px;
-      border-radius: 999px
+      border-radius: 999px;
+      box-shadow: 0 4px 24px rgba(0, 0, 0, .35)
     }
+
+
+
 
     .modes button {
       font-family: var(--font-d);
@@ -124,13 +190,29 @@
       border-radius: 999px;
       border: 0;
       background: transparent;
-      color: var(--dim)
+      color: var(--dim);
+      transition: all .2s ease;
+      cursor: pointer
     }
+
+
+
+
+    .modes button:active {
+      transform: scale(.92)
+    }
+
+
+
 
     .modes button.active {
       background: var(--signal);
-      color: var(--ink)
+      color: var(--ink);
+      box-shadow: 0 2px 12px rgba(95, 240, 200, .25)
     }
+
+
+
 
     /* avatar markers */
     .av {
@@ -143,39 +225,72 @@
       box-shadow: 0 0 0 6px rgba(95, 240, 200, .12)
     }
 
+
+
+
     .av.pulse {
       animation: pulse 2s infinite
     }
 
+
+
+
     @keyframes pulse {
       0% {
-        box-shadow: 0 0 0 4px rgba(95, 240, 200, .25)
+        box-shadow: 0 0 0 4px rgba(95, 240, 200, .3);
+        transform: scale(1)
       }
+
+
+
+
+      50% {
+        transform: scale(1.05)
+      }
+
+
+
 
       70% {
-        box-shadow: 0 0 0 16px rgba(95, 240, 200, 0)
+        box-shadow: 0 0 0 18px rgba(95, 240, 200, 0)
       }
 
+
+
+
       100% {
-        box-shadow: 0 0 0 4px rgba(95, 240, 200, 0)
+        box-shadow: 0 0 0 4px rgba(95, 240, 200, 0);
+        transform: scale(1)
       }
     }
+
+
+
 
     .me {
       border-color: #fff;
       box-shadow: 0 0 0 6px rgba(255, 255, 255, .14)
     }
 
+
+
+
     .av.real {
       border-color: #ffd76b;
       box-shadow: 0 0 0 6px rgba(255, 215, 107, .16)
     }
+
+
+
 
     /* real live users = gold */
     .av.area {
       border-style: dashed;
       border-color: #ffd76b
     }
+
+
+
 
     /* my dot when in neighborhood mode */
     .placehint {
@@ -194,9 +309,15 @@
       display: none
     }
 
+
+
+
     .placehint.show {
       display: block
     }
+
+
+
 
     .hub {
       width: 34px;
@@ -208,6 +329,9 @@
       border: 1px solid var(--line);
       font-size: 16px
     }
+
+
+
 
     .hub .cnt {
       position: absolute;
@@ -221,6 +345,9 @@
       border-radius: 999px
     }
 
+
+
+
     /* sheet */
     .sheet {
       position: absolute;
@@ -228,19 +355,28 @@
       right: 0;
       bottom: 0;
       z-index: 600;
-      background: var(--panel);
-      border-top: 1px solid var(--line);
-      border-radius: 22px 22px 0 0;
-      padding: 8px 18px 22px;
+      background: rgba(18, 24, 36, .88);
+      backdrop-filter: blur(24px) saturate(1.2);
+      -webkit-backdrop-filter: blur(24px) saturate(1.2);
+      border-top: 1px solid rgba(35, 48, 71, .5);
+      border-radius: 24px 24px 0 0;
+      padding: 8px 18px 28px;
       transform: translateY(110%);
-      transition: transform .28s cubic-bezier(.2, .8, .2, 1);
-      max-height: 82dvh;
-      overflow: auto
+      transition: transform .34s cubic-bezier(.32, .72, 0, 1);
+      max-height: 85dvh;
+      overflow: auto;
+      box-shadow: 0 -8px 40px rgba(0, 0, 0, .4)
     }
+
+
+
 
     .sheet.up {
       transform: translateY(0)
     }
+
+
+
 
     .grip {
       width: 38px;
@@ -250,13 +386,20 @@
       margin: 6px auto 14px
     }
 
+
+
+
     .photo {
       width: 100%;
-      aspect-ratio: 1/1;
-      border-radius: 16px;
+      aspect-ratio: 4/5;
+      border-radius: 20px;
       object-fit: cover;
-      background: #1c2536
+      background: linear-gradient(135deg, #1c2536, #0f1520);
+      box-shadow: 0 4px 20px rgba(0, 0, 0, .3)
     }
+
+
+
 
     .name {
       font-family: var(--font-d);
@@ -265,23 +408,35 @@
       margin: 14px 0 2px
     }
 
+
+
+
     .meta {
       color: var(--dim);
       font-size: 13px
     }
 
+
+
+
     .prompt {
       margin-top: 12px;
-      padding: 12px 14px;
-      background: var(--ink);
+      padding: 13px 15px;
+      background: rgba(10, 14, 20, .6);
       border: 1px solid var(--line);
-      border-radius: 12px
+      border-radius: 14px
     }
+
+
+
 
     .prompt .q {
       color: var(--dim);
       font-size: 12px
     }
+
+
+
 
     .prompt .a {
       font-family: var(--font-d);
@@ -289,6 +444,9 @@
       font-size: 15px;
       margin-top: 3px
     }
+
+
+
 
     .cta {
       width: 100%;
@@ -299,14 +457,33 @@
       font-family: var(--font-d);
       font-weight: 700;
       font-size: 16px;
-      background: var(--signal);
-      color: var(--ink)
+      background: linear-gradient(135deg, var(--signal) 0%, #4de8b8 100%);
+      color: var(--ink);
+      transition: all .15s ease;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(95, 240, 200, .2)
     }
+
+
+
+
+    .cta:active:not(:disabled) {
+      transform: scale(.97);
+      box-shadow: 0 2px 8px rgba(95, 240, 200, .3)
+    }
+
+
+
 
     .cta:disabled {
       background: var(--line);
-      color: var(--dim)
+      color: var(--dim);
+      box-shadow: none;
+      cursor: not-allowed
     }
+
+
+
 
     .cta.leave {
       background: transparent;
@@ -314,17 +491,37 @@
       color: var(--warn)
     }
 
+
+
+
     /* fuse timer */
     .fuse {
       display: flex;
       align-items: center;
       gap: 10px;
       margin-top: 14px;
-      padding: 12px 14px;
-      background: rgba(255, 122, 107, .1);
-      border: 1px solid rgba(255, 122, 107, .3);
-      border-radius: 12px
+      padding: 13px 15px;
+      background: rgba(255, 122, 107, .08);
+      border: 1px solid rgba(255, 122, 107, .25);
+      border-radius: 14px;
+      animation: fuseGlow 2s ease-in-out infinite alternate
     }
+
+
+
+
+    @keyframes fuseGlow {
+      from {
+        box-shadow: 0 0 0 0 rgba(255, 122, 107, 0)
+      }
+
+      to {
+        box-shadow: 0 0 18px rgba(255, 122, 107, .1)
+      }
+    }
+
+
+
 
     .fuse .t {
       font-family: var(--font-d);
@@ -333,10 +530,16 @@
       color: var(--warn)
     }
 
+
+
+
     .fuse .lbl {
       font-size: 12px;
       color: var(--dim)
     }
+
+
+
 
     /* chat */
     .chat {
@@ -349,27 +552,56 @@
       padding-right: 2px
     }
 
+
+
+
     .msg {
       max-width: 78%;
-      padding: 9px 13px;
-      border-radius: 14px;
+      padding: 10px 14px;
+      border-radius: 18px;
       font-size: 14px;
-      line-height: 1.35
+      line-height: 1.4;
+      animation: msgIn .25s cubic-bezier(.32, .72, 0, 1)
     }
 
+
+
+
+    @keyframes msgIn {
+      from {
+        opacity: 0;
+        transform: translateY(6px) scale(.96)
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0) scale(1)
+      }
+    }
+
+
+
+
     .msg.them {
-      background: var(--ink);
+      background: rgba(10, 14, 20, .8);
       border: 1px solid var(--line);
       align-self: flex-start;
       border-bottom-left-radius: 4px
     }
 
+
+
+
     .msg.me {
-      background: var(--signal);
+      background: linear-gradient(135deg, var(--signal), #4de8b8);
       color: var(--ink);
       align-self: flex-end;
-      border-bottom-right-radius: 4px
+      border-bottom-right-radius: 4px;
+      box-shadow: 0 2px 8px rgba(95, 240, 200, .15)
     }
+
+
+
 
     .row {
       display: flex;
@@ -377,25 +609,52 @@
       margin-top: 12px
     }
 
+
+
+
     .row input {
       flex: 1;
       padding: 13px 15px;
       border-radius: 12px;
       border: 1px solid var(--line);
-      background: var(--ink);
+      background: rgba(10, 14, 20, .6);
       color: var(--text);
       font-size: 15px;
-      outline: none
+      outline: none;
+      transition: all .2s ease
     }
+
+
+
+
+    .row input:focus {
+      border-color: var(--signal);
+      box-shadow: 0 0 0 3px rgba(95, 240, 200, .1)
+    }
+
+
+
 
     .row button {
       padding: 0 18px;
       border: 0;
       border-radius: 12px;
-      background: var(--signal);
+      background: linear-gradient(135deg, var(--signal), #4de8b8);
       color: var(--ink);
-      font-weight: 700
+      font-weight: 700;
+      transition: all .15s ease;
+      cursor: pointer
     }
+
+
+
+
+    .row button:active {
+      transform: scale(.92)
+    }
+
+
+
 
     .hubhead {
       font-family: var(--font-d);
@@ -403,12 +662,18 @@
       font-size: 20px
     }
 
+
+
+
     .here {
       display: flex;
       gap: 8px;
       flex-wrap: wrap;
       margin-top: 12px
     }
+
+
+
 
     .here .p {
       display: flex;
@@ -421,12 +686,18 @@
       font-size: 13px
     }
 
+
+
+
     .here .p .d {
       width: 22px;
       height: 22px;
       border-radius: 50%;
       background-size: cover
     }
+
+
+
 
     /* toast */
     .toast {
@@ -435,20 +706,29 @@
       left: 16px;
       right: 16px;
       z-index: 700;
-      background: var(--panel);
-      border: 1px solid var(--signal);
-      border-radius: 14px;
-      padding: 13px 15px;
+      background: rgba(18, 24, 36, .85);
+      backdrop-filter: blur(20px) saturate(1.2);
+      -webkit-backdrop-filter: blur(20px) saturate(1.2);
+      border: 1px solid rgba(95, 240, 200, .25);
+      border-radius: 18px;
+      padding: 14px 16px;
       display: flex;
       align-items: center;
       gap: 12px;
       transform: translateY(-140%);
-      transition: transform .3s cubic-bezier(.2, .8, .2, 1)
+      transition: transform .35s cubic-bezier(.32, .72, 0, 1);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, .35)
     }
+
+
+
 
     .toast.show {
       transform: translateY(0)
     }
+
+
+
 
     .toast .d {
       width: 40px;
@@ -458,14 +738,23 @@
       flex-shrink: 0
     }
 
+
+
+
     .toast .txt {
       flex: 1;
       font-size: 14px
     }
 
+
+
+
     .toast .txt b {
       font-family: var(--font-d)
     }
+
+
+
 
     .toast button {
       padding: 8px 12px;
@@ -475,30 +764,159 @@
       font-size: 13px
     }
 
+
+
+
     .toast .yes {
       background: var(--signal);
       color: var(--ink)
     }
+
+
+
 
     .toast .no {
       background: var(--line);
       color: var(--dim);
       margin-left: 6px
     }
+
+
+
+
+    /* profile form + intent chips */
+    .field {
+      margin-top: 14px
+    }
+
+
+
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      color: var(--dim);
+      margin-bottom: 6px
+    }
+
+
+
+
+    .field input {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(10, 14, 20, .6);
+      color: var(--text);
+      font-size: 15px;
+      outline: none;
+      transition: all .2s ease
+    }
+
+
+
+
+    .field input:focus {
+      border-color: var(--signal);
+      box-shadow: 0 0 0 3px rgba(95, 240, 200, .1);
+      background: rgba(10, 14, 20, .9)
+    }
+
+
+
+
+    .chips {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+      margin-top: 6px
+    }
+
+
+
+
+    .chip {
+      padding: 9px 16px;
+      border-radius: 999px;
+      border: 1px solid var(--line);
+      background: var(--ink);
+      color: var(--dim);
+      font-family: var(--font-d);
+      font-weight: 500;
+      font-size: 14px;
+      cursor: pointer;
+      transition: all .15s ease
+    }
+
+
+
+
+    .chip:active {
+      transform: scale(.93)
+    }
+
+
+
+
+    .chip.sel {
+      background: var(--signal);
+      color: var(--ink);
+      border-color: var(--signal);
+      box-shadow: 0 2px 12px rgba(95, 240, 200, .25)
+    }
+
+
+
+
+    .intent-badge {
+      display: inline-block;
+      margin-top: 8px;
+      padding: 5px 14px;
+      border-radius: 999px;
+      background: rgba(95, 240, 200, .1);
+      border: 1px solid rgba(95, 240, 200, .2);
+      color: var(--signal);
+      font-family: var(--font-d);
+      font-weight: 600;
+      font-size: 13px
+    }
+
+
+
+
+    .avatar-lg {
+      width: 96px;
+      height: 96px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: #1c2536;
+      border: 2px solid var(--line);
+      display: block;
+      margin: 4px auto 0
+    }
   </style>
 </head>
+
+
+
 
 <body>
   <div id="app">
     <div class="bar">
       <div class="brand">or<span>·</span>bit</div>
       <div style="display:flex;gap:8px">
+        <button class="ghost" id="panicBtn" style="background:var(--warn);color:#fff">⚡</button>
+        <button class="ghost" id="meBtn">◔ me</button>
         <button class="ghost" id="areaBtn">◎ set area</button>
         <button class="ghost" id="ghostBtn">◐ ghost mode</button>
       </div>
     </div>
     <div id="map"></div>
     <div class="placehint" id="placehint">Tap anywhere to set your area · tap “set area” again to cancel</div>
+    <div class="placehint" id="emptyhint" style="top:auto;bottom:76px;border-color:var(--line)">
+      You're on the map. When someone nearby is active, they'll appear here — tap them to say hi.
+    </div>
     <div class="modes">
       <button id="mRadar" class="active">Radar</button>
       <button id="mHub">Hubs</button>
@@ -509,6 +927,9 @@
     </div>
   </div>
 
+
+
+
   <script type="module">
     /* ============================================================
        ORBIT — base MVP.
@@ -516,12 +937,18 @@
        Feature A (chosen-area / neighborhood mode). All real via Firestore.
        ============================================================ */
 
+
+
+
     /* ---- Firebase ---- */
     import { initializeApp } from "https://www.gstatic.com/firebasejs/11.0.2/firebase-app.js";
     import { getAuth, signInAnonymously, onAuthStateChanged }
       from "https://www.gstatic.com/firebasejs/11.0.2/firebase-auth.js";
-    import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, collection, query, where, orderBy, onSnapshot, serverTimestamp }
+    import { getFirestore, doc, setDoc, getDoc, updateDoc, addDoc, deleteDoc, collection, query, where, orderBy, onSnapshot, serverTimestamp, getDocs }
       from "https://www.gstatic.com/firebasejs/11.0.2/firebase-firestore.js";
+
+
+
 
     const firebaseConfig = {
       apiKey: "AIzaSyCTM8FsMdKD0-NHfQ7jm6C2ui7B_tMzFO0",
@@ -532,13 +959,22 @@
       appId: "1:964170192042:web:2b66d76eb480a25d4cecd3"
     };
 
+
+
+
     const fbApp = initializeApp(firebaseConfig);
     const auth = getAuth(fbApp);
     const db = getFirestore(fbApp);   // ready for step 2
     let uid = null;                       // set once we're signed in
 
+
+
+
     const el = s => document.querySelector(s);
     const rand = (a, b) => a + Math.random() * (b - a);
+
+
+
 
     /* ---- geo helpers: geohash + fuzzing (safety core) ---- */
     // Only geohash + rounded coords should ever leave the device.
@@ -554,11 +990,26 @@
     }
     // round to ~20m grid — this is what we'd actually persist
     const fuzz = v => Math.round(v / 0.0002) * 0.0002;
+    // haversine distance in meters between two lat/lng points
+    function distMeters(lat1, lng1, lat2, lng2) {
+      const R = 6371000, toRad = d => d * Math.PI / 180;
+      const dLat = toRad(lat2 - lat1), dLng = toRad(lng2 - lng1);
+      const a = Math.sin(dLat / 2) ** 2 + Math.cos(toRad(lat1)) * Math.cos(toRad(lat2)) * Math.sin(dLng / 2) ** 2;
+      return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    }
+    function fmtDist(m) { return m < 1000 ? Math.round(m) + "m away" : (m / 1000).toFixed(1) + "km away"; }
+    function fmtSince(ts) { if (!ts) return ""; const min = Math.max(1, Math.round((Date.now() - ts) / 60000)); return min < 60 ? `here ${min} min` : `here ${Math.floor(min / 60)}h ${min % 60}m`; }
+
+
+
 
     /* ---- state ---- */
     let me = { lat: 19.0760, lng: 72.8777 }; // Mumbai default; overwritten by real GPS
     let ghost = false, mode = "radar", map, myMarker;
     const peerMarkers = {}, hubMarkers = {};
+
+
+
 
     /* ---- Feature A: chosen area ("neighborhood mode") ---- */
     // When set, we publish this chosen point at neighborhood resolution instead of GPS.
@@ -568,12 +1019,32 @@
     const AREA_FUZZ = 0.005;     // ~500m grid — neighborhood resolution
     let areaRing = null;         // the visible radius circle around my area dot
 
+
+
+
     /* ---- step 2: real users from Firestore ---- */
     const realMarkers = {};        // uid -> Leaflet marker
     const realUsers = {};          // uid -> {lat,lng,updatedAt}
     let lastWrite = 0;             // throttle: ms timestamp of last location write
     const WRITE_EVERY = 10000;    // write my location at most every 10s (quota safety)
     const STALE_MS = 120000;      // hide anyone not updated in the last 2 min
+    let myArrivedAt = null;          // timestamp of when I went live this session
+
+
+
+
+    /* ---- profiles + per-session intent ---- */
+    let myProfile = null;          // {name, photoUrl, prompt1, prompt2} loaded from profiles/{uid}
+    let sessionIntent = "Open";    // per-session "here to…" — rides on the location broadcast
+    const INTENTS = ["Friends", "Coffee", "Dating", "Open"];
+    const profileCache = {};       // uid -> profile, so we don't refetch on every dot tap
+    const PROMPTS = [              // the two prompt questions users answer
+      "I'm down to grab a…",
+      "You should say hi if…"
+    ];
+
+
+
 
     const peers = [
       {
@@ -590,10 +1061,79 @@
       },
     ];
     const hubs = [
-      { id: "h1", name: "Blue Tokai Cafe", emoji: "☕", here: 2, off: [0.0018, -0.0012] },
-      { id: "h2", name: "The Bar Stock", emoji: "🍸", here: 5, off: [-0.0022, 0.0020] },
-      { id: "h3", name: "Kitab Khana", emoji: "📚", here: 1, off: [0.0008, 0.0028] },
+      { id: "h1", name: "Blue Tokai Cafe", emoji: "☕", off: [0.0018, -0.0012] },
+      { id: "h2", name: "The Bar Stock", emoji: "🍸", off: [-0.0022, 0.0020] },
+      { id: "h3", name: "Kitab Khana", emoji: "📚", off: [0.0008, 0.0028] },
     ];
+    const hubCounts = {};       // hubId -> live count of people "here now"
+    const hubPresenceUnsubs = {}; // hubId -> unsub for its presence listener
+    let currentHub = null;      // hub I'm currently checked into (for cleanup)
+    let hubChatUnsub = null;    // active hub chat listener
+
+
+
+
+    const hiddenUids = new Set();
+    async function loadBlocks() {
+      hiddenUids.clear();
+      const [mine, theirs] = await Promise.all([
+        getDocs(query(collection(db, "blocks"), where("blockerUid", "==", uid))),
+        getDocs(query(collection(db, "blocks"), where("blockedUid", "==", uid)))
+      ]);
+      mine.forEach(d => hiddenUids.add(d.data().blockedUid));
+      theirs.forEach(d => hiddenUids.add(d.data().blockerUid));
+    }
+    async function blockUser(other) {
+      await setDoc(doc(db, "blocks", `${uid}_${other}`), { blockerUid: uid, blockedUid: other, createdAt: serverTimestamp() });
+      hiddenUids.add(other);
+      if (realMarkers[other]) { map.removeLayer(realMarkers[other]); delete realMarkers[other]; }
+      delete realUsers[other]; hideSheet();
+    }
+    async function reportUser(other, reason) {
+      await addDoc(collection(db, "reports"), { reporterUid: uid, reportedUid: other, reason, createdAt: serverTimestamp() });
+    }
+
+
+
+
+    /* ---- mutual spark (like) ---- */
+    async function likeUser(other) {
+      await setDoc(doc(db, "likes", `${uid}_${other}`), { from: uid, to: other, createdAt: serverTimestamp() });
+      try {
+        const mutual = await getDoc(doc(db, "likes", `${other}_${uid}`));
+        return mutual.exists(); // true = mutual spark!
+      } catch (e) { return false; }
+    }
+    async function checkLikedMe(other) {
+      try { const d = await getDoc(doc(db, "likes", `${other}_${uid}`)); return d.exists(); }
+      catch (e) { return false; }
+    }
+
+
+
+
+    /* ---- regulars: track sightings in localStorage ---- */
+    function trackSighting(otherId) {
+      const key = "orbit_sightings";
+      const data = JSON.parse(localStorage.getItem(key) || "{}");
+      const now = Date.now(), weekAgo = now - 7 * 86400000;
+      if (!data[otherId]) data[otherId] = [];
+      // only add one sighting per 30 min
+      const last = data[otherId][data[otherId].length - 1] || 0;
+      if (now - last > 1800000) data[otherId].push(now);
+      // prune older than a week
+      data[otherId] = data[otherId].filter(t => t > weekAgo);
+      localStorage.setItem(key, JSON.stringify(data));
+      return data[otherId].length;
+    }
+    function getSightings(otherId) {
+      const data = JSON.parse(localStorage.getItem("orbit_sightings") || "{}");
+      const weekAgo = Date.now() - 7 * 86400000;
+      return (data[otherId] || []).filter(t => t > weekAgo).length;
+    }
+
+
+
 
     /* ---- map ---- */
     function initMap() {
@@ -642,13 +1182,17 @@
         });
       } else {
         hubs.forEach(h => {
+          const cnt = hubCounts[h.id] || 0;
           const m = L.marker([me.lat + h.off[0], me.lng + h.off[1]],
-            { icon: icon("hub", `${h.emoji}<span class="cnt">${h.here}</span>`) }).addTo(map);
+            { icon: icon("hub", `${h.emoji}${cnt > 0 ? `<span class="cnt">${cnt}</span>` : ""}`) }).addTo(map);
           m.on("click", () => openHub(h));
           hubMarkers[h.id] = m;
         });
       }
     }
+
+
+
 
     /* ---- sheet ---- */
     const sheet = el("#sheet"), body = el("#sheetBody");
@@ -656,19 +1200,159 @@
     function hideSheet() { sheet.classList.remove("up"); if (typeof closeChat === "function") closeChat(); }
     sheet.addEventListener("click", e => { if (e.target === sheet) hideSheet() });
 
-    /* ---- 1v1 profile + REAL fuse (step 3) ---- */
-    function openProfile(p) {
+
+
+
+    /* ---- profile setup / edit ---- */
+    function esc(s) { return (s || "").replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c])); }
+
+
+
+
+    function openProfileEditor(firstTime) {
+      const pr = myProfile || {};
       showSheet(`
-    <img class="photo" src="${p.ph}">
-    <div class="name">${p.name}${p.age ? ", " + p.age : ""}</div>
-    <div class="meta">◦ ${p.d} away</div>
-    <div class="prompt"><div class="q">${p.q}</div><div class="a">${p.a}</div></div>
-    <button class="cta" id="approach">Send approach request</button>
+    <div class="name" style="text-align:center">${firstTime ? "Set up your profile" : "Edit profile"}</div>
+    <div class="meta" style="text-align:center">${firstTime ? "This is how others see you on the map." : ""}</div>
+    <img id="pvImg" class="avatar-lg" src="${esc(pr.photoUrl) || "https://i.pravatar.cc/200?u=" + uid}" onerror="this.onerror=null;this.src='https://i.pravatar.cc/200?u=${uid}'">
+    <div class="field"><label>Photo URL</label>
+      <input id="fPhoto" placeholder="https://…" value="${esc(pr.photoUrl)}"></div>
+    <div class="field"><label>Name</label>
+      <input id="fName" placeholder="What should people call you?" value="${esc(pr.name)}" maxlength="24"></div>
+    <div class="field"><label>${esc(PROMPTS[0])}</label>
+      <input id="fP1" placeholder="e.g. cutting chai at FC Road" value="${esc(pr.prompt1)}" maxlength="60"></div>
+    <div class="field"><label>${esc(PROMPTS[1])}</label>
+      <input id="fP2" placeholder="e.g. you also can't sit still on a Friday" value="${esc(pr.prompt2)}" maxlength="60"></div>
+    <button class="cta" id="saveProfile">${firstTime ? "Save & continue" : "Save"}</button>
   `);
-      // Only real users (they carry a uid that isn't a seed id) get a real request.
-      const isReal = p.id && !/^p\d$/.test(p.id);
-      el("#approach").onclick = () => isReal ? sendRequest(p) : startFuseSim(p);
+      // live photo preview
+      el("#fPhoto").oninput = e => { const v = e.target.value.trim(); el("#pvImg").src = v || ("https://i.pravatar.cc/200?u=" + uid); };
+      el("#saveProfile").onclick = async () => {
+        const name = el("#fName").value.trim();
+        if (!name) { el("#fName").style.borderColor = "var(--warn)"; return; }
+        const prof = {
+          name,
+          photoUrl: el("#fPhoto").value.trim(),
+          prompt1: el("#fP1").value.trim(),
+          prompt2: el("#fP2").value.trim(),
+          updatedAt: serverTimestamp()
+        };
+        try {
+          await setDoc(doc(db, "profiles", uid), prof, { merge: true });
+          myProfile = { ...prof }; profileCache[uid] = { ...prof };
+          if (firstTime) { pickIntent(); }   // first run flows into choosing intent
+          else hideSheet();
+        } catch (e) { console.error("profile save failed:", e); }
+      };
     }
+
+
+
+
+    /* ---- per-session intent picker ("here to…") ---- */
+    function pickIntent() {
+      showSheet(`
+    <div class="name" style="text-align:center">Right now, I'm here to…</div>
+    <div class="meta" style="text-align:center">Others see this while you're on the map. Change it anytime.</div>
+    <div class="chips" style="justify-content:center;margin-top:18px">
+      ${INTENTS.map(i => `<div class="chip ${i === sessionIntent ? "sel" : ""}" data-i="${i}">${i}</div>`).join("")}
+    </div>
+    <button class="cta" id="intentDone">Go live on the map</button>
+  `);
+      body.querySelectorAll(".chip").forEach(c => {
+        c.onclick = () => {
+          sessionIntent = c.dataset.i;
+          body.querySelectorAll(".chip").forEach(x => x.classList.toggle("sel", x === c));
+        };
+      });
+      el("#intentDone").onclick = () => { hideSheet(); lastWrite = 0; trackLocation(); };
+    }
+
+
+
+
+    /* ---- 1v1 profile + REAL fuse (step 3) ---- */
+    async function openProfile(p) {
+      const isReal = p.id && !/^p\d$/.test(p.id);
+
+
+
+
+      // for real users, fetch their actual profile (cache first)
+      let prof = null, intent = p.intent;
+      if (isReal) {
+        prof = profileCache[p.id] || null;
+        if (!prof) {
+          try {
+            const s = await getDoc(doc(db, "profiles", p.id));
+            if (s.exists()) { prof = s.data(); profileCache[p.id] = prof; }
+          } catch (e) { console.error("profile fetch failed:", e); }
+        }
+      }
+
+
+
+
+      const photo = (prof && prof.photoUrl) || p.ph;
+      const name = (prof && prof.name) || p.name;
+      const p1q = PROMPTS[0], p1a = (prof && prof.prompt1) || "";
+      const p2q = PROMPTS[1], p2a = (prof && prof.prompt2) || "";
+
+
+
+
+      const fallback = "https://i.pravatar.cc/300?u=" + (p.id || "anon");
+      showSheet(`
+    <img class="photo" src="${esc(photo) || fallback}" onerror="this.onerror=null;this.src='${fallback}'">
+    <div class="name">${esc(name)}</div>
+    <div class="meta">◦ ${esc(p.d || "nearby")}${p.arrivedAt ? ` · ${fmtSince(p.arrivedAt)}` : ""}${(isReal && getSightings(p.id) > 1) ? ` · <span style="color:var(--signal)">seen here ${getSightings(p.id)}x this week</span>` : ""}</div>
+    ${intent ? `<div class="intent-badge">here to: ${esc(intent)}</div>` : ""}
+    ${p1a ? `<div class="prompt"><div class="q">${esc(p1q)}</div><div class="a">${esc(p1a)}</div></div>` : ""}
+    ${p2a ? `<div class="prompt"><div class="q">${esc(p2q)}</div><div class="a">${esc(p2a)}</div></div>` : ""}
+    ${(!p1a && !p2a && isReal) ? `<div class="prompt"><div class="a">${esc(name)} hasn't added prompts yet.</div></div>` : ""}
+    <div style="display:flex;gap:8px;margin-top:16px">
+      <button class="cta" id="approach" style="margin:0">Send approach request</button>
+      ${isReal ? `<button class="cta" id="likeBtn" style="margin:0;flex:0 0 auto;padding:15px 20px;background:var(--ink);border:1px solid #ff6b8a;color:#ff6b8a">♡</button>` : ""}
+    </div>
+    ${isReal ? `<div style="display:flex;gap:8px;margin-top:10px">
+  <button class="cta" id="reportBtn" style="background:var(--ink);border:1px solid var(--line);color:var(--dim);margin:0">Report</button>
+  <button class="cta" id="blockBtn" style="background:var(--ink);border:1px solid var(--warn);color:var(--warn);margin:0">Block</button>
+</div>`: ""}
+  `);
+      el("#approach").onclick = () => isReal ? sendRequest({ ...p, ph: photo, name }) : startFuseSim(p);
+      if (isReal) {
+        // like button: tap to like, mutual = instant chat
+        const likeBtn = el("#likeBtn");
+        if (likeBtn) {
+          // check if they already liked me
+          checkLikedMe(p.id).then(liked => { if (liked) { likeBtn.textContent = "♡·"; likeBtn.title = "They liked you!"; likeBtn.style.boxShadow = "0 0 10px rgba(255,107,138,.3)"; } });
+          likeBtn.onclick = async () => {
+            likeBtn.disabled = true; likeBtn.textContent = "♥"; likeBtn.style.color = "#ff6b8a"; likeBtn.style.background = "rgba(255,107,138,.12)";
+            const mutual = await likeUser(p.id);
+            if (mutual) {
+              likeBtn.textContent = "✓ Spark!"; likeBtn.style.background = "var(--signal)"; likeBtn.style.color = "var(--ink)"; likeBtn.style.borderColor = "var(--signal)";
+              // mutual spark — skip fuse, create request as accepted and open chat
+              try {
+                const ref = await addDoc(collection(db, "requests"), { senderId: uid, receiverId: p.id, status: "accepted", createdAt: Date.now(), expiresAt: Date.now() + 300000 });
+                setTimeout(() => openChat(ref.id, { name, ph: photo }), 600);
+              } catch (e) { console.error("spark chat failed:", e); }
+            }
+          };
+        }
+        // track regulars
+        trackSighting(p.id);
+        el("#blockBtn").onclick = () => blockUser(p.id);
+        el("#reportBtn").onclick = () => {
+          showSheet(`<div class="name" style="text-align:center">Report</div>
+          <div class="chips" style="justify-content:center;margin-top:16px">
+          ${["Spam", "Harassment", "Fake profile", "Other"].map(r => `<div class="chip" data-r="${r}">${r}</div>`).join("")}</div>`);
+          body.querySelectorAll(".chip").forEach(c => c.onclick = async () => { await reportUser(p.id, c.dataset.r); hideSheet(); });
+        };
+      }
+    }
+
+
+
 
     /* SENDER side: create a request doc, then watch it for accept/expire */
     async function sendRequest(p) {
@@ -685,6 +1369,9 @@
         });
       } catch (e) { console.error("request create failed:", e); return; }
 
+
+
+
       showSheet(`
     <img class="photo" src="${p.ph}" style="aspect-ratio:2/1">
     <div class="name">Request sent</div>
@@ -694,12 +1381,18 @@
     <button class="cta" disabled id="waitbtn">Waiting…</button>
   `);
 
+
+
+
       // cosmetic countdown driven by expiresAt (the doc is the real truth)
       const tick = setInterval(() => {
         const d = expiresAt - Date.now();
         if (d <= 0) { clearInterval(tick); const t = el("#ft"); if (t) t.textContent = "0:00"; }
         else { const s = Math.floor(d / 1000); const t = el("#ft"); if (t) t.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")}`; }
       }, 1000);
+
+
+
 
       // watch MY request doc for the receiver's decision
       const stop = onSnapshot(ref, snap => {
@@ -714,26 +1407,46 @@
       });
     }
 
+
+
+
     /* real chat: messages live in requests/{id}/messages, both sides listen live */
     let chatUnsub = null;
+    let typingTimeout = null;
+    const ICEBREAKERS = [
+      "What brings you here right now?",
+      "First thing you noticed about this place?",
+      "Coffee or something stronger? ☕",
+      "What's the best thing that happened to you today?",
+      "If you could be anywhere else right now, where?"
+    ];
     function openChat(reqId, p) {
       if (chatUnsub) { chatUnsub(); chatUnsub = null; }   // drop any previous chat listener
+      const icebreaker = ICEBREAKERS[Math.floor(Math.random() * ICEBREAKERS.length)];
       showSheet(`
     <div style="display:flex;align-items:center;gap:10px">
       <div class="d" style="width:38px;height:38px;border-radius:50%;background:url(${p.ph}) center/cover;border:2px solid var(--signal)"></div>
       <div><div class="name" style="font-size:17px;margin:0">${p.name || "Connected"}</div>
       <div class="meta">connected · say hi</div></div>
     </div>
-    <div class="chat" id="chat"></div>
+    <div class="chat" id="chat">
+      <div class="msg them" style="background:rgba(95,240,200,.08);border-color:rgba(95,240,200,.2);color:var(--signal);font-style:italic;font-size:13px;align-self:center;max-width:90%;text-align:center">✨ Icebreaker: ${icebreaker}</div>
+    </div>
+    <div id="typingInd" style="display:none;font-size:12px;color:var(--dim);margin-top:4px;padding-left:4px">••• typing</div>
     <div class="row"><input id="cin" placeholder="Say something…" autocomplete="off">
       <button id="csend">Send</button></div>
   `);
-      const chatBox = el("#chat"), input = el("#cin");
+      const chatBox = el("#chat"), input = el("#cin"), typingInd = el("#typingInd");
+
+
+
 
       // live listener: render messages in order, mine right / theirs left
       const msgsRef = collection(db, "requests", reqId, "messages");
       chatUnsub = onSnapshot(query(msgsRef, orderBy("createdAt", "asc")), snap => {
-        chatBox.innerHTML = "";
+        // keep icebreaker, clear the rest
+        const ice = chatBox.querySelector(".msg");
+        chatBox.innerHTML = ""; if (ice) chatBox.appendChild(ice);
         snap.forEach(d => {
           const m = d.data();
           const who = m.senderId === uid ? "me" : "them";
@@ -742,11 +1455,39 @@
           chatBox.appendChild(div);
         });
         chatBox.scrollTop = chatBox.scrollHeight;
+        // hide typing indicator when a new message arrives from them
+        if (typingInd) typingInd.style.display = "none";
       }, err => console.error("chat listen failed:", err));
+
+
+
+
+      // typing indicator: write to request doc, listen for other's typing
+      const reqRef = doc(db, "requests", reqId);
+      let myTyping = false;
+      input.oninput = () => {
+        if (!myTyping) { myTyping = true; updateDoc(reqRef, { [`typing_${uid}`]: true }).catch(() => { }); }
+        clearTimeout(typingTimeout);
+        typingTimeout = setTimeout(() => { myTyping = false; updateDoc(reqRef, { [`typing_${uid}`]: false }).catch(() => { }); }, 2000);
+      };
+      // listen for their typing state
+      const typingUnsub = onSnapshot(reqRef, snap => {
+        if (!snap.exists()) return;
+        const d = snap.data();
+        const otherTyping = Object.entries(d).find(([k, v]) => k.startsWith("typing_") && k !== `typing_${uid}` && v);
+        if (typingInd) typingInd.style.display = otherTyping ? "block" : "none";
+      });
+      // clean up typing listener with chat
+      const origUnsub = chatUnsub;
+      chatUnsub = () => { if (origUnsub) origUnsub(); typingUnsub(); if (myTyping) updateDoc(reqRef, { [`typing_${uid}`]: false }).catch(() => { }); };
+
+
+
 
       const send = async () => {
         const text = input.value.trim(); if (!text) return;
-        input.value = "";
+        input.value = ""; myTyping = false; clearTimeout(typingTimeout);
+        updateDoc(reqRef, { [`typing_${uid}`]: false }).catch(() => { });
         try {
           await addDoc(msgsRef, { senderId: uid, text, createdAt: Date.now() });
         } catch (e) { console.error("send failed:", e); input.value = text; }
@@ -756,8 +1497,14 @@
       input.focus();
     }
 
+
+
+
     /* stop the chat listener when the sheet is closed */
     function closeChat() { if (chatUnsub) { chatUnsub(); chatUnsub = null; } }
+
+
+
 
     /* seed-user simulation kept only for the fake green demo dots */
     function startFuseSim(p) {
@@ -776,6 +1523,9 @@
       }, 1000);
       setTimeout(() => { clearInterval(tick); openFakeChat(p); }, 2500);
     }
+
+
+
 
     /* local-only chat for the green demo dots (no backend) */
     function openFakeChat(p) {
@@ -798,32 +1548,104 @@
       el("#csend").onclick = send; input.onkeydown = e => { if (e.key === "Enter") send(); };
     }
 
-    /* ---- Hub group chat ---- */
+
+
+
+    /* ---- Hub: real presence + live venue chat ---- */
     function openHub(h) {
+      const joined = currentHub === h.id;
       showSheet(`
-    <div class="hubhead">${h.emoji} ${h.name}</div>
-    <div class="meta">${h.here} people here now</div>
-    <div class="here">
-      ${[...Array(h.here)].map((_, i) => `<div class="p"><div class="d" style="background:url(https://i.pravatar.cc/60?img=${i + 5}) center/cover"></div>guest ${i + 1}</div>`).join("")}
-    </div>
-    <button class="cta" id="join">I'm here now — join chat</button>
+    <div class="hubhead">${h.emoji} ${esc(h.name)}</div>
+    <div class="meta"><span id="hubCount">${hubCounts[h.id] || 0}</span> here now</div>
+    <button class="cta ${joined ? "leave" : ""}" id="hubBtn">${joined ? "Leave " + esc(h.name) : "I'm here now — join"}</button>
     <div id="hubchat"></div>
   `);
-      el("#join").onclick = () => {
-        el("#hubchat").innerHTML = `
-      <div class="chat" id="chat">
-        <div class="msg them">anyone got a table for 3?</div>
-        <div class="msg them">we're 5 near the window — merge?</div>
-      </div>
-      <div class="row"><input id="cin" placeholder="Message ${h.name}…"><button id="csend">Send</button></div>`;
-        const chat = el("#chat"), input = el("#cin");
-        const add = (t, who) => { const m = document.createElement("div"); m.className = `msg ${who}`; m.textContent = t; chat.appendChild(m); chat.scrollTop = chat.scrollHeight };
-        el("#csend").onclick = () => { if (!input.value.trim()) return; add(input.value, "me"); input.value = "" };
-        input.onkeydown = e => { if (e.key === "Enter") el("#csend").click() };
-        el("#join").className = "cta leave"; el("#join").textContent = "Leave " + h.name;
-        el("#join").onclick = () => openHub(h);
+      if (joined) mountHubChat(h);   // already checked in -> show chat immediately
+
+
+
+
+      el("#hubBtn").onclick = async () => {
+        if (currentHub === h.id) { await leaveHub(); openHub(h); return; }   // leaving
+        // joining: leave any previous hub first, then check in here
+        if (currentHub) await leaveHub();
+        try {
+          await setDoc(doc(db, "hubs", h.id, "presence", uid),
+            { name: (myProfile && myProfile.name) || "Someone", updatedAt: serverTimestamp() });
+          currentHub = h.id;
+          openHub(h);   // re-render into joined state (shows chat)
+        } catch (e) { console.error("hub join failed:", e); }
       };
     }
+
+
+
+
+    async function leaveHub() {
+      if (!currentHub) return;
+      const prev = currentHub; currentHub = null;
+      if (hubChatUnsub) { hubChatUnsub(); hubChatUnsub = null; }
+      try { await deleteDoc(doc(db, "hubs", prev, "presence", uid)); }
+      catch (e) { console.error("hub leave failed:", e); }
+    }
+
+
+
+
+    function mountHubChat(h) {
+      const wrap = el("#hubchat"); if (!wrap) return;
+      wrap.innerHTML = `
+    <div class="chat" id="hchat"></div>
+    <div class="row"><input id="hcin" placeholder="Message ${esc(h.name)}…" autocomplete="off"><button id="hcsend">Send</button></div>`;
+      const box = el("#hchat"), input = el("#hcin");
+      const msgsRef = collection(db, "hubs", h.id, "messages");
+      if (hubChatUnsub) { hubChatUnsub(); hubChatUnsub = null; }
+      hubChatUnsub = onSnapshot(query(msgsRef, orderBy("createdAt", "asc")), snap => {
+        box.innerHTML = "";
+        snap.forEach(d => {
+          if (hiddenUids.has(d.data().senderId)) return;
+          const m = d.data();
+          const who = m.senderId === uid ? "me" : "them";
+          const div = document.createElement("div");
+          div.className = `msg ${who}`;
+          div.textContent = who === "them" ? `${m.name || "Someone"}: ${m.text}` : m.text;
+          box.appendChild(div);
+        });
+        box.scrollTop = box.scrollHeight;
+      }, err => console.error("hub chat listen failed:", err));
+      const send = async () => {
+        const text = input.value.trim(); if (!text) return; input.value = "";
+        try { await addDoc(msgsRef, { senderId: uid, name: (myProfile && myProfile.name) || "Someone", text, createdAt: Date.now() }); }
+        catch (e) { console.error("hub send failed:", e); input.value = text; }
+      };
+      el("#hcsend").onclick = send;
+      input.onkeydown = e => { if (e.key === "Enter") send(); };
+    }
+
+
+
+
+    /* listen to every hub's presence so pins show live counts */
+    function listenHubs() {
+      hubs.forEach(h => {
+        if (hubPresenceUnsubs[h.id]) return;
+        hubPresenceUnsubs[h.id] = onSnapshot(collection(db, "hubs", h.id, "presence"), snap => {
+          let n = 0;
+          snap.forEach(d => {
+            if (d.id === uid || hiddenUids.has(d.id)) return;
+            const ts = d.data().updatedAt?.toMillis?.() ?? 0;
+            if (Date.now() - ts <= STALE_MS) n++;   // only count fresh presence
+          });
+          hubCounts[h.id] = n;
+          // update the live count in an open hub sheet, and the pin
+          const c = el("#hubCount"); if (c && currentHub === h.id) c.textContent = n;
+          if (mode === "hub") renderMode();
+        }, err => console.error("hub presence listen failed:", err));
+      });
+    }
+
+
+
 
     /* ---- RECEIVER side: listen for incoming requests (step 3) ---- */
     let activeIncoming = null;   // request id currently shown in the toast
@@ -842,7 +1664,7 @@
         let picked = null;
         snap.forEach(d => {
           const r = d.data();
-          if (!picked && r.expiresAt && Date.now() < r.expiresAt) picked = { id: d.id, ...r };
+          if (!picked && r.expiresAt && Date.now() < r.expiresAt && !hiddenUids.has(r.senderId)) picked = { id: d.id, ...r };
         });
         if (!picked) {
           clearIncoming();                     // nothing valid -> remove the toast entirely
@@ -853,10 +1675,19 @@
       }, err => console.error("request listen failed:", err));
     }
 
+
+
+
     function showIncoming(r) {
       clearIncoming();                         // remove any existing toast first
       activeIncoming = r.id;
+      // haptic + sound feedback
+      if (navigator.vibrate) navigator.vibrate([80, 40, 80, 40, 120]);
+      try { const ctx = new (window.AudioContext || window.webkitAudioContext)(); const o = ctx.createOscillator(); const g = ctx.createGain(); o.connect(g); g.connect(ctx.destination); o.frequency.value = 880; o.type = "sine"; g.gain.value = 0.08; o.start(); g.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.3); o.stop(ctx.currentTime + 0.3); } catch (e) { }
       const p = { name: "Someone nearby", ph: "https://i.pravatar.cc/300?u=" + r.senderId };
+
+
+
 
       // build the toast element fresh, only now that a real request exists
       const t = document.createElement("div");
@@ -868,12 +1699,18 @@
       el("#app").appendChild(t);
       requestAnimationFrame(() => t.classList.add("show"));  // trigger slide-in
 
+
+
+
       incomingTick = setInterval(() => {
         const d = r.expiresAt - Date.now();
         if (d <= 0) { clearIncoming(); return; }
         const s = Math.floor(d / 1000);
         const f = el("#toastFuse"); if (f) f.textContent = `${Math.floor(s / 60)}:${String(s % 60).padStart(2, "0")} left`;
       }, 1000);
+
+
+
 
       el("#toastYes").onclick = async () => {
         clearIncoming();
@@ -895,7 +1732,29 @@
       };
     }
 
+
+
+
     /* ---- controls ---- */
+    el("#panicBtn").onclick = async () => {
+      ghost = true; const g = el("#ghostBtn"); g.classList.add("on"); g.textContent = "● ghost on";
+      if (myMarker) { map.removeLayer(myMarker); myMarker = null; }
+      if (areaRing) { map.removeLayer(areaRing); areaRing = null; }
+      if (currentHub) await leaveHub(); hideSheet();
+      // Remove location from Firestore so other users stop seeing you immediately
+      try { await deleteDoc(doc(db, "locations", uid)); } catch (e) { console.error("panic delete failed:", e); }
+    };
+    el("#meBtn").onclick = () => {
+      // quick menu: edit profile or change current intent
+      showSheet(`
+    <div class="name" style="text-align:center">You</div>
+    <div class="meta" style="text-align:center">Currently here to: <b style="color:var(--signal)">${esc(sessionIntent)}</b></div>
+    <button class="cta" id="editP" style="margin-top:18px">Edit profile</button>
+    <button class="cta" id="changeI" style="background:var(--ink);border:1px solid var(--line);color:var(--text)">Change intent</button>
+  `);
+      el("#editP").onclick = () => openProfileEditor(false);
+      el("#changeI").onclick = () => pickIntent();
+    };
     el("#areaBtn").onclick = () => {
       const b = el("#areaBtn"), hint = el("#placehint");
       if (area) {                         // area is set -> clear it, back to live GPS
@@ -916,22 +1775,34 @@
     el("#mRadar").onclick = () => { mode = "radar"; el("#mRadar").classList.add("active"); el("#mHub").classList.remove("active"); renderMode(); renderRealDots() };
     el("#mHub").onclick = () => { mode = "hub"; el("#mHub").classList.add("active"); el("#mRadar").classList.remove("active"); renderMode(); renderRealDots() };
 
+
+
+
     /* ---- real GPS: write my location to Firestore (throttled) ---- */
+    let watching = false;
     function trackLocation() {
+      if (watching) return; watching = true;
       if (!navigator.geolocation) { console.warn("No geolocation"); return; }
       navigator.geolocation.watchPosition(pos => {
         me.lat = pos.coords.latitude; me.lng = pos.coords.longitude;
         if (!area && !placingArea) { map.setView([fuzz(me.lat), fuzz(me.lng)]); drawMe(); }
+        listenNearby();             // re-subscribe if geohash prefix changed
         writeMyLocation();          // throttled inside
       }, err => console.warn("GPS:", err.message),
         { enableHighAccuracy: true, timeout: 10000, maximumAge: 0 });
     }
+
+
+
 
     async function writeMyLocation() {
       if (!uid || ghost) return;               // no identity, or hidden -> don't write
       const now = Date.now();
       if (now - lastWrite < WRITE_EVERY) return; // throttle to protect free-tier quota
       lastWrite = now;
+
+
+
 
       // Feature A: if the user picked an area, publish THAT at neighborhood resolution.
       // Otherwise publish real GPS at the normal ~20m grid. Either way, exact coords never leave.
@@ -942,26 +1813,44 @@
       } else {
         lat = fuzz(me.lat); lng = fuzz(me.lng);
       }
+      if (!myArrivedAt) myArrivedAt = Date.now();
       const payload = {
         geohash: geohash(lat, lng),
         lat, lng,
         coarse: !!area,                        // flag so we could show area dots differently later
+        intent: sessionIntent,                 // per-session "here to…"
+        arrivedAt: myArrivedAt,                // stable per session — when I went live
         updatedAt: serverTimestamp()           // server clock = reliable staleness
       };
       try { await setDoc(doc(db, "locations", uid), payload); }
       catch (e) { console.error("location write failed:", e); }
     }
 
-    /* ---- listen for everyone's location, render real dots ---- */
+
+
+
+    /* ---- listen for nearby locations via geohash prefix (~5km radius) ---- */
+    let nearbyUnsub = null;
+    let currentPrefix = null;
     function listenNearby() {
-      onSnapshot(collection(db, "locations"), snap => {
+      const prefix = geohash(me.lat, me.lng, 5);
+      if (prefix === currentPrefix) return;  // same cell, keep existing listener
+      currentPrefix = prefix;
+      if (nearbyUnsub) nearbyUnsub();        // drop old listener
+
+
+      const q = query(collection(db, "locations"),
+        where("geohash", ">=", prefix),
+        where("geohash", "<", prefix + "\uf8ff"));
+      nearbyUnsub = onSnapshot(q, snap => {
         const seen = new Set();
         snap.forEach(d => {
           if (d.id === uid) return;              // that's me, skip
+          if (hiddenUids.has(d.id)) return;
           const u = d.data();
           const ts = u.updatedAt?.toMillis?.() ?? 0;
           if (Date.now() - ts > STALE_MS) return;// stale -> treat as gone
-          realUsers[d.id] = { lat: u.lat, lng: u.lng };
+          realUsers[d.id] = { lat: u.lat, lng: u.lng, intent: u.intent || "Open", arrivedAt: u.arrivedAt || 0 };
           seen.add(d.id);
         });
         // drop anyone who vanished from the snapshot or went stale
@@ -970,11 +1859,17 @@
       }, err => console.error("nearby listen failed:", err));
     }
 
+
+
+
     function renderRealDots() {
       // remove markers for users no longer present
       Object.keys(realMarkers).forEach(id => {
         if (!realUsers[id]) { map.removeLayer(realMarkers[id]); delete realMarkers[id]; }
       });
+      // empty-state hint: only in radar mode, only when nobody real is around
+      const hint = el("#emptyhint");
+      if (hint) hint.classList.toggle("show", mode === "radar" && Object.keys(realUsers).length === 0);
       if (mode !== "radar") return;              // only show people in Radar mode
       Object.entries(realUsers).forEach(([id, u]) => {
         if (realMarkers[id]) {
@@ -984,14 +1879,17 @@
           const av = m.getElement().querySelector(".av");
           av.style.backgroundImage = "url(https://i.pravatar.cc/300?u=" + id + ")"; // stable avatar per uid
           m.on("click", () => openProfile({
-            id, name: "Nearby user", age: "", d: "close by",
+            id, name: "Nearby user", d: fmtDist(distMeters(me.lat, me.lng, u.lat, u.lng)),
             ph: "https://i.pravatar.cc/300?u=" + id,
-            q: "They're really here", a: "a live person on your map"
+            intent: u.intent, arrivedAt: u.arrivedAt
           }));
           realMarkers[id] = m;
         }
       });
     }
+
+
+
 
     /* ---- auth status pill (temporary, so you can SEE step 1 working) ---- */
     function setStatus(txt, ok) {
@@ -1008,15 +1906,64 @@
       p.style.borderColor = ok ? "var(--signal)" : "var(--line)";
     }
 
+
+
+
     /* ---- boot: sign in anonymously, THEN start the app ---- */
     let booted = false;
-    function startApp() {
+    async function startApp() {
       if (booted) return; booted = true;
+
+
+
+
+      if (!localStorage.getItem("orbit_age_ok")) {
+        await new Promise(res => {
+          const o = document.createElement("div");
+          o.style.cssText = "position:fixed;inset:0;z-index:2000;background:var(--ink);display:flex;flex-direction:column;align-items:center;justify-content:center;padding:32px;text-align:center";
+          o.innerHTML = `<div class="brand" style="font-size:28px;margin-bottom:16px">or<span style="color:var(--signal)">·</span>bit</div>
+          <div class="meta" style="max-width:320px;margin-bottom:24px">You must be 18 or older. Meet in public, tell a friend, use panic-hide (⚡) if unsafe.</div>
+          <button class="cta" id="ageOk" style="max-width:280px">I am 18 or older — continue</button>`;
+          document.body.appendChild(o);
+          o.querySelector("#ageOk").onclick = () => { localStorage.setItem("orbit_age_ok", "1"); o.remove(); res(); };
+        });
+      }
+
+
+
+
       initMap();
-      trackLocation();       // step 2: write my location
-      listenNearby();        // step 2: render everyone else's, live
-      listenForRequests();   // step 3: watch for incoming approach requests
+      if ('serviceWorker' in navigator) { navigator.serviceWorker.getRegistrations().then(rs => rs.forEach(r => r.unregister())); }
+
+
+
+
+      // load my profile; if none, run first-time setup (which flows into intent + go-live)
+      try {
+        const snap = await getDoc(doc(db, "profiles", uid));
+        if (snap.exists()) { myProfile = snap.data(); profileCache[uid] = myProfile; }
+      } catch (e) { console.error("profile load failed:", e); }
+
+
+
+
+      await loadBlocks();
+      listenNearby();        // render everyone else's, live
+      listenForRequests();   // watch for incoming approach requests
+      listenHubs();          // live presence counts for venue pins
+
+
+
+
+      if (!myProfile) {
+        openProfileEditor(true);   // first run: set up profile -> intent -> go live
+      } else {
+        trackLocation();           // returning user: start broadcasting right away
+      }
     }
+
+
+
 
     setStatus("connecting…", false);
     onAuthStateChanged(auth, user => {
@@ -1031,7 +1978,16 @@
       console.error("Auth failed:", err);
       setStatus("auth failed — check console", false);
     });
+
+
+
+
+    // best-effort cleanup: remove my hub presence if I close the tab
+    window.addEventListener("beforeunload", () => { if (currentHub) leaveHub(); });
   </script>
 </body>
+
+
+
 
 </html>
